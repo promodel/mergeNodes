@@ -75,6 +75,25 @@ public class SimpleMergeNodeTest {
 	}
 
 	@Test
+	public void shouldFindAllEdges(){
+		NodeMerger nm=new NodeMerger(graphDb);
+		fail();
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void shouldThrowExceptionIfNodeNotFromDB(){
+		NodeMerger nm=new NodeMerger(graphDb);
+		Node n=null;
+		db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+		try (Transaction tx = db.beginTx()) {
+		n=db.createNode();
+		nm.checkNodeInDb(n);
+		}
+		fail("Should throw IllegalArgumentException");
+	}
+	
+
+	@Test
 	public void shouldCreateNodeTest() {
 		// START SNIPPET: unitTest
 		Node n = null;

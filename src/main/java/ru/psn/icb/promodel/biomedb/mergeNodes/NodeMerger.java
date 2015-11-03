@@ -1,5 +1,9 @@
 package ru.psn.icb.promodel.biomedb.mergeNodes;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
@@ -21,8 +25,8 @@ private IAttributeMergeCheck acheck;
 	public void merge(Node toKeep, Node toRemove) {
 		try (Transaction tx = graphDb.beginTx()) {
 		// TODO check that both nodes are in the database
-			if(!toKeep.getGraphDatabase().equals(graphDb)) throw new IllegalArgumentException("First node does not belong to the database at hand");
-			if(!toRemove.getGraphDatabase().equals(graphDb)) throw new IllegalArgumentException("Second node does not belong to the database at hand");
+			checkNodeInDb(toKeep);
+			checkNodeInDb(toRemove);
 		// TODO check that nodes can be merged
 			if(ncheck.canMerge(toKeep, toRemove)){
 		// TODO find all edges for toRemove and clone them
@@ -38,6 +42,10 @@ private IAttributeMergeCheck acheck;
 			tx.success();
 		}		
 	}
+	void checkNodeInDb(Node n) {
+		if(!n.getGraphDatabase().equals(graphDb)) throw new IllegalArgumentException("First node does not belong to the database at hand");
+	}
+	
 	boolean isNeighbours(Node n1,Node n2){
 		return false;
 	}
