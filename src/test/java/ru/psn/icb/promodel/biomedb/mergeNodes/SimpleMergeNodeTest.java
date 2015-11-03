@@ -62,7 +62,7 @@ public class SimpleMergeNodeTest {
 			}
 		}
 
-		NodeMergerer nm=new NodeMergerer(graphDb);
+		NodeMerger nm=new NodeMerger(graphDb);
 		nm.merge(toKeep,toRemove);
 		try (Transaction tx = graphDb.beginTx()) {
 			Node foundNode = graphDb.getNodeById(toKeep.getId());

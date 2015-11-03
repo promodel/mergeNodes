@@ -6,12 +6,12 @@ import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
 
-public class NodeMergerer implements INodeMergeCheck,IEdgeMergeCheck,IAttributeMergeCheck{
+public class NodeMerger implements INodeMergeCheck,IEdgeMergeCheck,IAttributeMergeCheck{
 private final GraphDatabaseService graphDb;
 private INodeMergeCheck ncheck;
 private IEdgeMergeCheck echeck;
 private IAttributeMergeCheck acheck;
-	public NodeMergerer(GraphDatabaseService graphDb) {
+	public NodeMerger(GraphDatabaseService graphDb) {
 		this.graphDb=graphDb;
 		ncheck=this;
 		echeck=this;
