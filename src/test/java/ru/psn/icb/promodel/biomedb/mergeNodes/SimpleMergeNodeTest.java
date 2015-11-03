@@ -1,6 +1,8 @@
 package ru.psn.icb.promodel.biomedb.mergeNodes;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
@@ -10,6 +12,7 @@ import org.junit.Test;
 import org.neo4j.cypher.ExecutionEngine;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -19,12 +22,23 @@ import org.neo4j.test.TestGraphDatabaseFactory;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.isIn;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class SimpleMergeNodeTest {
 	protected GraphDatabaseService graphDb;
-	private static String cypher = "CREATE (one {name:1}),(two {name: 2}),(another {name:1}),(tree {name:3}),one-[:T]->two,another-[:T]->three";
+	private static String cypher = "CREATE (one {name:1}),"
+			+ "(two {name: 2}),"
+			+ "(another {name:1}),"
+			+ "(tree {name:3}),"
+			+ "(four {name:4}),"
+			+ "one-[:T]->two,"
+			+ "another-[:T]->three,"
+			+ "one-[:T2]->three,"
+			+ "one-[:T2]->four";
 
 	private static GraphDatabaseService db;
 	private Node toKeep, toRemove;
@@ -43,6 +57,21 @@ public class SimpleMergeNodeTest {
 
 	@Test
 	public void shouldMergeNodes() {
+		prepareNodes();
+
+		NodeMerger nm=new NodeMerger(graphDb);
+		nm.merge(toKeep,toRemove);
+		try (Transaction tx = graphDb.beginTx()) {
+			Node foundNode = graphDb.getNodeById(toKeep.getId());
+			assertThat(foundNode.getId(), is(toKeep.getId()));
+			assertThat((Long) foundNode.getProperty("name"), is(1L));
+			assertThat(foundNode.getDegree(),is(4));
+		}
+	
+
+	}
+
+	void prepareNodes() {
 		try (Transaction tx = graphDb.beginTx();
 				Result result = graphDb
 						.execute("match (n {name: 1}) return n, n.name")) {
@@ -61,23 +90,19 @@ public class SimpleMergeNodeTest {
 				i += 1;
 			}
 		}
-
-		NodeMerger nm=new NodeMerger(graphDb);
-		nm.merge(toKeep,toRemove);
-		try (Transaction tx = graphDb.beginTx()) {
-			Node foundNode = graphDb.getNodeById(toKeep.getId());
-			assertThat(foundNode.getId(), is(toKeep.getId()));
-			assertThat((Long) foundNode.getProperty("name"), is(1L));
-			assertThat(foundNode.getDegree(),is(2));
-		}
-	
-
 	}
 
 	@Test
 	public void shouldFindAllEdges(){
+		prepareNodes();
 		NodeMerger nm=new NodeMerger(graphDb);
-		fail();
+		Map<Node, List<Relationship>> res=nm.getEdges(toRemove);
+		assertEquals(1, res.size());
+		assertThat(toKeep, not(isIn(res.keySet())));
+		res=nm.getEdges(toKeep);
+		assertEquals(3, res.size());
+		assertThat(toRemove, not(isIn(res.keySet())));
+//		fail();
 	}
 	
 	@Test(expected=IllegalArgumentException.class)
