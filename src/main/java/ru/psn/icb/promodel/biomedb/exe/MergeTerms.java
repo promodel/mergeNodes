@@ -17,61 +17,58 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import ru.psn.icb.promodel.biomedb.mergeNodes.CantMergeException;
 import ru.psn.icb.promodel.biomedb.mergeNodes.NodeMerger;
 
-public class MergeXRefs {
+public class MergeTerms {
 	public static String DB_PATH = "/Users/lptolik/Documents/Neo4j/data/graph.db";
-	public static String GET_DB = "match (d:DB) return d.name";
-	public static String GET_XREF_ID = "match (x1:XRef)-[:LINK_TO]->(d:DB) "
-			+ "where d.name={dbn} "
-			+ "return x1";
-	public static String GET_XREFS = "match (t:Term) where t.text={txt} return t order by id(t)";
+	public static String GET_TRIP_TEXT = "match (t:Term) "
+			+ "with t.text as text,count(t) as cnt "
+			+ "where cnt >1 return text,cnt " + "order by cnt desc";
+	public static String GET_TERMS = "match (t:Term) where t.text={txt} return t order by id(t)";
 
 	private GraphDatabaseService graphDb;
 
 	private NodeMerger nMerger;
 
 	public static void main(String[] args) throws IOException {
-		MergeXRefs mt = new MergeXRefs();
+		MergeTerms mt = new MergeTerms();
 		mt.createDb();
-		mt.mergeXRefs();
+		mt.mergeTerms();
 		mt.shutDown();
 	}
 
-	void mergeXRefs() {
-		ArrayList<String> dbs = new ArrayList<String>();
+	void mergeTerms() {
+		ArrayList<String> terms = new ArrayList<String>();
 		try (Transaction tx = graphDb.beginTx();
-				Result result = graphDb.execute(GET_DB)) {
-			Iterator<String> n_column = result.columnAs("d.name");
+				Result result = graphDb.execute(GET_TRIP_TEXT)) {
+			Iterator<String> n_column = result.columnAs("text");
 			int i = 0;
 			for (String t : IteratorUtil.asIterable(n_column)) {
-				dbs.add(t);
+				terms.add(t);
 				i++;
 			}
-			System.out.println("found " + i + " databases");
+			System.out.println("found " + i + " triplets");
 		}
-		for (String text : dbs) {
+		for (String text : terms) {
 			Map<String, Object> params = new HashMap<String, Object>();
-			params.put("dbn", text);
-				try (Transaction tx = graphDb.beginTx();
-						Result result = graphDb.execute(GET_XREF_ID, params)) {
-					Iterator<Node> n_column = result.columnAs("x1");
-					int i = 0;
-					Map<String,Node> xrefs=new HashMap<String, Node>();
-					for (Node node : IteratorUtil.asIterable(n_column)) {
-						String id=(String) node.getProperty("id");
-						if(xrefs.containsKey(id)){
-							Node first=xrefs.get(id);
+			params.put( "txt", text );
+			try (Transaction tx = graphDb.beginTx();
+					Result result = graphDb.execute(GET_TERMS,params)){
+				Iterator<Node> n_column = result.columnAs("t");
+				int i = 0;
+				Node first=null;
+				for (Node node : IteratorUtil.asIterable(n_column)) {	
+					if(i==0){
+						first=node;
+					}else{
 						nMerger.merge(first, node);
-						i++;
-						}else{
-							xrefs.put(id, node);
-						}
 					}
-					tx.success();
-					System.out.println("For db " + text + " merged " + i + " xrefs");
-				} catch (CantMergeException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					i++;
 				}
+				tx.success();
+			} catch (CantMergeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		}
 	}
 
